@@ -1,4 +1,4 @@
-package com.lukagejak.horizon;
+package com.lukagejak.fxl;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -15,7 +15,7 @@ import java.io.FileNotFoundException;
  * read the app's own files: the one APK in the cache folder, read only.
  */
 public final class ApkProvider extends ContentProvider {
-    static final String AUTHORITY = "com.lukagejak.horizon.update";
+    static final String AUTHORITY = "com.lukagejak.fxl.update";
     static final String NAME = "update.apk";
 
     static Uri uri() {
