@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Builds the Android app: the game's library, the java launcher, the Java
-# runtime and Horizon's version folder as assets, then the APK.
+# runtime and FXL's version folder as assets, then the APK.
 #
 #   android/build.sh            release APK in android/build/
-#   HORIZON_ANDROID_PROFILE=android  the game without LTO, quicker to build
+#   FXL_ANDROID_PROFILE=android  the game without LTO, quicker to build
 #   android/release.sh          then publishes it for the app's updater
-#   HORIZON_ANDROID_KEYSTORE=... signs it with your key (else the debug key)
+#   FXL_ANDROID_KEYSTORE=... signs it with your key (else the debug key)
 #
 # Needs Rust with the aarch64-linux-android target, clang and lld, the
 # Android SDK and NDK (ANDROID_HOME), JDK 17 or newer for Gradle, xz, zip
@@ -30,9 +30,9 @@ jre_files=(
 
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/crates/horizon-client/Cargo.toml" | head -n 1)
 commit=$(git -C "$repo" rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
-export HORIZON_ANDROID_BUILD="${HORIZON_ANDROID_BUILD:-$version+$commit.$(date -u +%Y%m%d%H%M)}"
-jobs="${HORIZON_ANDROID_JOBS:-4}"
-profile="${HORIZON_ANDROID_PROFILE:-release}"
+export FXL_ANDROID_BUILD="${FXL_ANDROID_BUILD:-$version+$commit.$(date -u +%Y%m%d%H%M)}"
+jobs="${FXL_ANDROID_JOBS:-4}"
+profile="${FXL_ANDROID_PROFILE:-release}"
 # The Azure app players sign in through (public; Settings can override it).
 export HORIZON_MSA_CLIENT_ID="${HORIZON_MSA_CLIENT_ID:-5be5d759-7f2f-4790-be62-438977cdc7a5}"
 
@@ -41,18 +41,18 @@ mkdir -p "$stage/jniLibs/arm64-v8a" "$stage/assets" "$cache"
 libs="$stage/jniLibs/arm64-v8a"
 strip=$(command -v llvm-strip || printf '%s\n' /usr/bin/llvm-strip-* | sort -V | tail -n 1)
 
-echo "== The game ($HORIZON_ANDROID_BUILD)"
+echo "== The game ($FXL_ANDROID_BUILD)"
 cargo build --manifest-path "$repo/Cargo.toml" -p horizon-client --example horizon \
     --target aarch64-linux-android --profile "$profile" -j "$jobs" \
     --no-default-features --features audio,android
-"$strip" --strip-debug -o "$libs/libhorizon.so" \
+"$strip" --strip-debug -o "$libs/libfxl.so" \
     "$repo/target/aarch64-linux-android/$profile/examples/libhorizon.so"
 
 echo "== The java launcher"
 cargo build --manifest-path "$here/java-launcher/Cargo.toml" --release --target aarch64-linux-android
 launcher="$here/java-launcher/target/aarch64-linux-android/release/horizon-java-launcher"
-cp "$launcher" "$libs/libhorizonjava.so"
-cp "$launcher" "$libs/libhorizonjavac.so"
+cp "$launcher" "$libs/libfxljava.so"
+cp "$launcher" "$libs/libfxljavac.so"
 cp "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/libc++_shared.so" "$libs/"
 
 echo "== The Java runtime"
@@ -72,7 +72,7 @@ if [ ! -f "$jre_zip" ]; then
 fi
 cp "$jre_zip" "$stage/assets/jre-25.zip"
 
-echo "== Horizon's version folder"
+echo "== FXL's version folder"
 root="$build/root"
 rm -rf "$root" && mkdir -p "$root"
 (cd "$repo" && cp --parents -r research-lock.json LICENSE crates/horizon-prepare/Cargo.toml \
@@ -102,11 +102,11 @@ fi
 echo "sdk.dir=$ANDROID_HOME" > local.properties
 code=$(date -u +%s | cut -c1-9)
 ./gradlew --no-daemon -q :app:assembleRelease "${aapt2[@]}" \
-    -PhorizonVersionName="$version" \
-    -PhorizonVersionCode="$code"
-apk="$build/horizon-$version-android-arm64.apk"
+    -PfxlVersionName="$version" \
+    -PfxlVersionCode="$code"
+apk="$build/fxl-$version-android-arm64.apk"
 cp app/build/outputs/apk/release/app-release.apk "$apk"
 # For android/release.sh: the tag the updater compares.
 printf '%s\n' "$code" > "$build/version-code"
-printf '%s\n' "$HORIZON_ANDROID_BUILD" > "$build/version-name"
+printf '%s\n' "$FXL_ANDROID_BUILD" > "$build/version-name"
 echo "Built $apk"
