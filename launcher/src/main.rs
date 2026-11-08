@@ -1,4 +1,4 @@
-//! Horizon launcher: installs Horizon builds, prepares them from the player's own Minecraft,
+//! FXL launcher: installs FXL builds, prepares them from the player's own Minecraft,
 //! and starts the client or a dedicated server.
 
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
@@ -77,10 +77,10 @@ enum Page {
 }
 
 impl Page {
-    /// `HORIZON_LAUNCHER_PAGE=mods` (or `modpacks`, `shaders`, `servers`, `versions`, `notes`,
+    /// `FXL_LAUNCHER_PAGE=mods` (or `modpacks`, `shaders`, `servers`, `versions`, `notes`,
     /// `settings`) opens on that page, for screenshots; Home otherwise.
     fn from_env() -> Page {
-        match std::env::var("HORIZON_LAUNCHER_PAGE").as_deref() {
+        match std::env::var("FXL_LAUNCHER_PAGE").as_deref() {
             Ok("mods" | "modpacks" | "shaders" | "datapacks") => Page::Mods,
             Ok("servers") => Page::Servers,
             Ok("versions") => Page::Versions,
@@ -160,7 +160,7 @@ struct Launcher {
     checked: Option<Instant>,
     update_error: Option<String>,
     self_update: SelfUpdate,
-    /// The Horizon version being installed as an update, and whether it becomes the selected one.
+    /// The FXL version being installed as an update, and whether it becomes the selected one.
     update_install: Option<(String, bool)>,
     /// The install bar's previous and current fraction, so it moves rather than jumps.
     bar: (f32, f32),
@@ -247,7 +247,7 @@ struct Launcher {
     collection: collection::Collection,
     /// Settings' "Connect an AI agent" (`agents_page`).
     agents: agents_page::AgentsUi,
-    /// How many play Horizon now, while the server answers ("N playing now" on the Play page).
+    /// How many play FXL now, while the server answers ("N playing now" on the Play page).
     playing: Option<u64>,
     tx: Sender<Msg>,
     rx: Receiver<Msg>,
@@ -257,12 +257,12 @@ struct Launcher {
     install_started: Option<Instant>,
     prepare_started: Option<Instant>,
     play_pressed: Option<Instant>,
-    /// `horizon-launcher benchmark` started this window to measure it.
+    /// `fxl-launcher benchmark` started this window to measure it.
     bench: Option<perf::Bench>,
     /// The Modpacks page: the imported packs (read when the page first opens), the one shown,
     /// the report's filter, and the pipeline step running now with its log.
     packs: Vec<horizon_launcher::modpacks::Imported>,
-    /// Modpacks installed from Horizon's registry, each its own profile.
+    /// Modpacks installed from FXL's registry, each its own profile.
     registry_packs: Vec<horizon_launcher::browser::horizon::pack::Installed>,
     packs_loaded: Option<Instant>,
     pack_open: Option<String>,
@@ -349,11 +349,11 @@ impl Launcher {
         }
         // Release builds on Linux put their entry back in the applications menu when there is
         // none or it starts a program that is gone (a moved or deleted binary), never over one
-        // that works; `HORIZON_LAUNCHER_DESKTOP_ENTRY=1` does it in a development build.
+        // that works; `FXL_LAUNCHER_DESKTOP_ENTRY=1` does it in a development build.
         if cfg!(target_os = "linux")
             && settings.desktop_entry()
             && (!cfg!(debug_assertions)
-                || std::env::var_os("HORIZON_LAUNCHER_DESKTOP_ENTRY").is_some())
+                || std::env::var_os("FXL_LAUNCHER_DESKTOP_ENTRY").is_some())
         {
             std::thread::spawn(|| {
                 let _ = horizon_launcher::desktop::repair(backend::exe_path());
@@ -556,7 +556,7 @@ impl Launcher {
         });
     }
 
-    /// Installs the Horizon version the last check found, keeping the player's choice of
+    /// Installs the FXL version the last check found, keeping the player's choice of
     /// version unless they were on the newest one.
     fn install_update(&mut self) {
         let Some(release) = self.updates.horizon.clone() else {
@@ -601,7 +601,7 @@ impl Launcher {
                     .cloned()
             });
         let Some(base) = base else {
-            self.native_error = Some(tr("Install Horizon first.").into());
+            self.native_error = Some(tr("Install FXL first.").into());
             return;
         };
         let folder = match self.native_mods_to_build() {
@@ -916,7 +916,7 @@ impl Launcher {
                                 .and_then(|since| backend::crash_report_since(&home, since));
                             if error.is_some() && report.is_none() && self.switched_to_dx12() {
                                 self.client_error = Some(
-                                    "Horizon's Vulkan renderer crashed while starting on this \
+                                    "FXL's Vulkan renderer crashed while starting on this \
                                      graphics card, so the game now uses DirectX 12. Press Play \
                                      to start it again. Video Settings > Graphics API switches \
                                      back."
@@ -997,7 +997,7 @@ impl Launcher {
         for home in homes {
             match backend::switch_to_dx12(&home) {
                 Ok(changed) => switched |= changed,
-                Err(e) => eprintln!("Horizon launcher: could not switch to DirectX 12: {e}"),
+                Err(e) => eprintln!("FXL launcher: could not switch to DirectX 12: {e}"),
             }
         }
         switched
@@ -1284,7 +1284,7 @@ fn version_tag(tag: &str) -> Div {
         .child(tag.trim_start_matches('v').to_string())
 }
 
-/// Horizon's mark: two stems, their reflection below, and the horizon across in the accent.
+/// FXL's mark: two stems, their reflection below, and the horizon across in the accent.
 fn mark(size: f32, t: &Theme) -> Div {
     let u = size / 16.;
     let stem = |x: f32, y: f32, color: Hsla| {
@@ -1323,8 +1323,6 @@ static KEYBOARD: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::
 /// put it in focus.
 fn keyboard(el: Stateful<Div>, t: &Theme) -> Stateful<Div> {
     let (ring, gap) = (t.accent, t.page);
-    // A ring with a gap of page colour, so it shows around filled buttons too. GPUI draws nothing
-    // for a shadow without blur: half a pixel keeps it crisp.
     let shadow = |color, spread: f32| gpui::BoxShadow {
         color,
         offset: gpui::point(px(0.), px(0.)),
@@ -1387,7 +1385,6 @@ fn button(
             .text_color(t.ink),
         Kind::Ghost => base.text_color(t.muted).hover(move |s| s.text_color(t.ink)),
     };
-    // The label sits on the block's face, above its lip; pressing pushes it down.
     let base = base.child(
         div()
             .relative()
@@ -1400,7 +1397,7 @@ fn button(
     keyboard(track_hover(base, id), &t).active(|s| s.opacity(theme::PRESSED).top(px(1.)))
 }
 
-/// Copies to the clipboard, or into `HORIZON_LAUNCHER_CLIPBOARD` when a test run sets it
+/// Copies to the clipboard, or into `FXL_LAUNCHER_CLIPBOARD` when a test run sets it
 /// (`horizon_launcher::desktop_seams`).
 fn copy_to_clipboard(cx: &mut App, item: gpui::ClipboardItem) {
     let Some(file) = horizon_launcher::desktop_seams::clipboard_file() else {
@@ -1518,14 +1515,10 @@ fn segments<T: Copy + PartialEq + 'static>(
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PlayPress {
     Play,
-    /// Not prepared, for an account that owns the game: prepare it (from the player's install,
-    /// else downloaded from Mojang for that account), then play, as the official launcher does.
     PrepareThenPlay,
-    /// Not prepared and no owner (signing in comes first), or busy preparing or playing.
     Nothing,
 }
 
-/// `owner`: whether an account here owns the game, by the keychain (`Launcher::owner`).
 fn play_press(prepared: bool, owner: Option<bool>, busy: bool) -> PlayPress {
     match (prepared, owner) {
         _ if busy => PlayPress::Nothing,
@@ -1535,15 +1528,10 @@ fn play_press(prepared: bool, owner: Option<bool>, busy: bool) -> PlayPress {
     }
 }
 
-/// Whether a shortcut that starts the game at once (a server's Join, a world's Play, a friend's
-/// code, a pack's Play) starts it now: only when Play would play. Never while a preparation runs:
-/// the game would open on half-written files.
 fn starts_now(prepared: bool, preparing: bool, running: bool) -> bool {
     play_press(prepared, None, preparing || running) == PlayPress::Play
 }
 
-/// The selected version once one has been removed: the saved choice if it is still installed,
-/// else the newest left.
 fn selection_after_removal(installed: &[String], saved: Option<String>) -> Option<String> {
     saved
         .filter(|s| installed.contains(s))
@@ -1554,7 +1542,6 @@ fn disabled(b: Stateful<Div>) -> Stateful<Div> {
     b.opacity(theme::DISABLED).cursor_default().tab_stop(false)
 }
 
-/// A page's title in the pixel face and one line on what it is for.
 fn page_header(title: &str, description: &str, t: &Theme) -> Div {
     div()
         .flex()
@@ -1573,11 +1560,6 @@ fn page_header(title: &str, description: &str, t: &Theme) -> Div {
         )
 }
 
-/// One row of a list, as its own panel: a name in the pixel face with an optional detail under
-/// it, then a value or a control on the right. Rows were numbered in the quiet look; `_n` keeps
-/// the call sites as they are.
-/// How an available update is named: a Nightly by its title ("Nightly 2026-10-28 · 0c02067"), a
-/// release by its tag.
 fn update_name(release: &Release) -> &str {
     match release.nightly {
         Some(_) => &release.name,
@@ -1595,7 +1577,6 @@ fn index_row(
     slot_row(None, name, detail, right, t)
 }
 
-/// A row with an icon slot (`blocks::slot`) on its left: a project in the Mods page's lists.
 fn slot_row(
     slot: Option<Div>,
     name: impl IntoElement,
@@ -1634,12 +1615,10 @@ fn slot_row(
         .children(right)
 }
 
-/// A plate that stands apart from the page: notices, the console, the agents note.
 fn plate(t: &Theme) -> Div {
     blocks::panel(t)
 }
 
-/// Something went wrong: a dot in the danger colour, then what happened.
 fn notice(text_: String, t: &Theme) -> Div {
     plate(t)
         .flex()
@@ -1662,7 +1641,6 @@ fn notice(text_: String, t: &Theme) -> Div {
         .child(div().flex_1().min_w_0().child(text_))
 }
 
-/// An empty state: a short sentence, and the one thing to do about it.
 fn centered(text_: &str, t: &Theme) -> Div {
     div()
         .flex()
@@ -1673,13 +1651,10 @@ fn centered(text_: &str, t: &Theme) -> Div {
         .child(text(theme::UI).text_color(t.muted).child(text_.to_string()))
 }
 
-/// The name the game made up for a player without an account, once it has run.
 fn offline_name() -> Option<String> {
     player_name(&std::fs::read_to_string(backend::game_home().join("horizon-player.txt")).ok()?)
 }
 
-/// The name in `horizon-player.txt`: the game writes `name:Player12345` (horizon-client's
-/// offline_name.rs).
 fn player_name(text: &str) -> Option<String> {
     text.lines()
         .find_map(|line| line.trim().strip_prefix("name:"))
@@ -1688,7 +1663,6 @@ fn player_name(text: &str) -> Option<String> {
         .map(str::to_owned)
 }
 
-/// `1234` as `1,234`.
 fn thousands(n: u64) -> String {
     let digits = n.to_string();
     let mut out = String::new();
@@ -1701,7 +1675,6 @@ fn thousands(n: u64) -> String {
     out
 }
 
-/// A mono line in upper case: the status above a title, the footer's links.
 fn caps(s: impl AsRef<str>) -> Div {
     text(theme::MICRO).child(s.as_ref().to_uppercase())
 }
@@ -1721,8 +1694,6 @@ fn megabytes(bytes: u64) -> String {
 // ----- Pages -------------------------------------------------------------------------------------
 
 impl Launcher {
-    /// The top bar: the mark and name over the sidebar (in the title bar on Windows and Linux
-    /// client-side decorations), the pages with their icons, then the account and Settings.
     fn topbar(&mut self, window: &Window, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let mut nav = div().flex().flex_none().h_full().gap(px(2.));
@@ -1769,8 +1740,6 @@ impl Launcher {
                 }));
             nav = nav.child(keyboard(track_hover(item, id), &t));
         }
-        // Only a signed-in account says "Microsoft account"; otherwise an offline name, or the
-        // one the game made up.
         let (name, how) = self.who_plays();
         let account = keyboard(div().id("account"), &t)
             .relative()
@@ -1812,7 +1781,6 @@ impl Launcher {
             .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
                 this.account_menu = !this.account_menu;
                 if this.account_menu {
-                    // Who can play may have changed elsewhere since the window opened.
                     this.accounts = Accounts::load();
                 }
                 cx.notify();
@@ -1863,7 +1831,6 @@ impl Launcher {
             .bg(t.side)
             .border_b_2()
             .border_color(t.outline)
-            // Custom title bars carry the mark and name above the sidebar.
             .when(!titlebar::draws_brand(window), |bar| {
                 bar.child(
                     div()
@@ -1876,7 +1843,7 @@ impl Launcher {
                         .child(
                             blocks::pixel(20., FontWeight::SEMIBOLD)
                                 .text_color(t.ink)
-                                .child("HORIZON"),
+                                .child("FXL"),
                         ),
                 )
             })
@@ -1893,8 +1860,6 @@ impl Launcher {
             )
     }
 
-    /// The sidebar: Horizon and the imported modpacks, the player's servers, then the
-    /// launcher's own update, the community links and its version.
     fn sidebar(&mut self, window: &Window, cx: &mut Context<Self>) -> Stateful<Div> {
         let t = self.theme;
         self.load_packs();
@@ -2052,10 +2017,6 @@ impl Launcher {
             }
             _ => {}
         }
-        // Sculk's card above the links: seen without scrolling, on every page but Servers, which shows
-        // its wide banner. Tall where the sidebar has the height for it besides its rows (about 60
-        // high each, under headings of about 40) and the links, compact otherwise. After a while on
-        // screen a "Hide" beside its label puts it away for good.
         if self.page != Page::Servers && !self.settings.partner_hidden {
             let free = f32::from(window.viewport_size().height)
                 - theme::TOPBAR
@@ -2148,7 +2109,6 @@ impl Launcher {
             .selected()
             .cloned()
             .unwrap_or_else(|| "No version".into());
-        // A block as tall as Play: "VERSION" over the tag, and a chevron.
         let mut wrap = div().relative().child(
             keyboard(div().id("picker"), &t)
                 .relative()
@@ -2200,8 +2160,6 @@ impl Launcher {
                 .bg(t.surface)
                 .flex()
                 .flex_col();
-            // Picking a version keeps the selected instance on it; the launcher's own version
-            // (newest unless chosen otherwise on Versions) follows updates.
             let follows = self.launcher_version().cloned();
             for tag in &self.installed {
                 let selected = self.selected() == Some(tag);
@@ -2268,7 +2226,6 @@ impl Launcher {
     fn play_page(&mut self, banner_width: f32, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let Some(tag) = self.selected().cloned() else {
-            // No hero without a version: the page starts below the top bar like the others.
             return div()
                 .flex()
                 .flex_col()
@@ -2289,13 +2246,11 @@ impl Launcher {
                 ));
         };
         let prepared = backend::is_prepared(&tag);
-        // Prepared without sounds (#1035): Prepare again is the fix, so it stands out.
         let silent = prepared && !backend::has_sounds(&tag);
         let version = backend::game_version(&tag);
         let hero = self.hero(&tag, &version, prepared, cx);
         let running = self.client.is_some() || self.starting_client.is_some();
         let play_label = if running { "Running" } else { "Play" };
-        // The label clears the icon in every language ("Играть" is wider than "Play").
         let mut play = button("play", play_label, Kind::Primary, &t)
             .min_w(px(200.))
             .h(px(60.))
@@ -2349,12 +2304,9 @@ impl Launcher {
                     .child(play),
             );
 
-        // Not prepared: an owner can have Horizon download Minecraft from Mojang; without an
-        // owner there is nothing to play, so signing in comes first.
         let first = (!prepared && !self.preparing)
             .then_some(self.owner_shown())
             .flatten();
-        // No launcher folder with Minecraft on this computer: an owner needs none.
         let no_install = self.settings.minecraft_dir.is_none();
         let resources_value = match first {
             _ if self.preparing => tr("Preparing…").to_string(),
@@ -2363,7 +2315,7 @@ impl Launcher {
                 &[("version", &version)],
             ),
             Some(true) => trf(
-                "Not prepared. Horizon can download Minecraft {version} from Mojang for your account, or use your own install.",
+                "Not prepared. FXL can download Minecraft {version} from Mojang for your account, or use your own install.",
                 &[("version", &version)],
             ),
             Some(false) => trf(
@@ -2441,7 +2393,7 @@ impl Launcher {
             || {
                 div()
                     .child(if owner {
-                        tr("None needed: Horizon downloads Minecraft from Mojang for your account.")
+                        tr("None needed: FXL downloads Minecraft from Mojang for your account.")
                     } else {
                         tr("Not found. Choose the folder where your launcher keeps Minecraft.")
                     })
@@ -2481,8 +2433,6 @@ impl Launcher {
             ));
         {
             rows = rows.child(self.join_friend_row(self.can_start(&tag), cx));
-            // The top bar shows who plays; a row only when there is something to do about it:
-            // no account that owns the game (Play needs one), or offline.
             if self.owner_shown() == Some(false) {
                 rows = rows.child(index_row(
                     5,
@@ -2524,8 +2474,6 @@ impl Launcher {
             }
         }
 
-        // The banner: Horizon's landscape (`art.rs`) under a veil of the page colour, the hero and
-        // the Play row over it. It reaches the content's edges and the top bar.
         let (scene, scene_width) = self.art.scene(t.dark, self.scale, banner_width);
         let veil = |angle: f32, from: f32, to: f32, at: f32| {
             div()
@@ -2574,12 +2522,8 @@ impl Launcher {
             .child(div().relative().child(hero))
             .child(div().relative().child(actions));
         let mut page = div().flex().flex_col().gap(px(28.)).child(banner);
-        // The preparation's progress and error right under the buttons, where the player
-        // looks after pressing Prepare, not below the fold (#666).
         if self.preparing {
             let last = self.prepare_log.back().cloned().unwrap_or_default();
-            // A download from Mojang shows how far it is, and can stop (it goes on from there
-            // next time).
             let download = horizon_launcher::mojang::progress();
             let cancel = download.map(|_| {
                 button("download-cancel", "Cancel", Kind::Ghost, &t).on_click(|_, _, _| {
@@ -2646,7 +2590,6 @@ impl Launcher {
         page
     }
 
-    /// "Horizon crashed": the report and the logs, and where to report it.
     fn crash_notice(&self, crash: Crash, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let mut actions = div().flex().flex_wrap().gap(px(8.)).mt(px(8.));
@@ -2722,7 +2665,7 @@ impl Launcher {
             .child(
                 text(theme::HEADING)
                     .text_color(t.ink)
-                    .child(tr("Horizon crashed")),
+                    .child(tr("FXL crashed")),
             );
         if !crash.summary.is_empty() {
             body = body.child(div().text_color(t.ink_soft).child(crash.summary));
@@ -2759,7 +2702,6 @@ impl Launcher {
             .child(body)
     }
 
-    /// The Play page's focal point: what will start, and a line from its notes.
     fn hero(&self, tag: &str, version: &str, prepared: bool, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let summary = match &self.releases {
@@ -2769,8 +2711,7 @@ impl Launcher {
                 .and_then(|r| backend::notes_summary(&r.body)),
             _ => None,
         };
-        let title = "Horizon";
-        // Never squeezed by the rows below: the ping notice can make it tall.
+        let title = "FXL";
         let mut hero = div()
             .flex()
             .flex_none()
@@ -2819,7 +2760,6 @@ impl Launcher {
                     .text_color(t.ink)
                     .child(title),
             )
-            // The version is in the picker beside Play: here only what it brings.
             .children(summary.map(|line| {
                 text(theme::BODY)
                     .max_w(px(560.))
@@ -2860,8 +2800,6 @@ impl Launcher {
                 ),
             });
         }
-        // Players who answered the first-run question before the ping existed read about it
-        // once here.
         if !self.settings.ping_notice_seen && !self.collection.consent.needs_asking() {
             hero = hero.child(
                 plate(&t)
@@ -2928,7 +2866,6 @@ impl Launcher {
                 cx.notify();
             },
         ));
-        // Linux: the launcher's entry in the applications menu (`horizon_launcher::desktop`).
         let menu_entry = switch("desktop-entry", self.settings.desktop_entry(), &t).on_click(
             cx.listener(|this, _: &ClickEvent, _, cx| {
                 let on = !this.settings.desktop_entry();
@@ -3112,7 +3049,7 @@ impl Launcher {
                     .child(group("AI", "terminal"))
                     .child(self.no_ai_row(n + 6, cx))
                     .child(group("About", "info-box"))
-                    .child(index_row(n + 7, "Horizon", Some(plain(&horizon)), horizon_action, &t))
+                    .child(index_row(n + 7, "FXL", Some(plain(&horizon)), horizon_action, &t))
                     .child(index_row(
                         n + 8,
                         tr("Launcher"),
@@ -3151,7 +3088,7 @@ impl Launcher {
                             n + 11,
                             tr("Applications menu"),
                             Some(plain(if self.settings.desktop_entry() {
-                                "Horizon and its icon are in your desktop's menu."
+                                "FXL and its icon are in your desktop's menu."
                             } else {
                                 "Not in your desktop's menu."
                             })),
@@ -3165,11 +3102,6 @@ impl Launcher {
             .children(self.dev_options_section(cx))
     }
 
-    /// Settings' Game arguments row: the extra arguments the game starts with, kept in
-    /// `settings.json` and appended to the launcher's own (quotes group a word with spaces).
-    /// Settings' Native mods row (docs/native-mods.md): off by default. On, Build compiles the
-    /// native mods installed in the instance Play starts, after a warning that names them, and
-    /// that instance then plays the build.
     fn native_mods_row(&self, n: usize, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let on = self.settings.native_mods;
@@ -3218,8 +3150,6 @@ impl Launcher {
         )
     }
 
-    /// The warning before a native build: what the mods can do and which mods. The build starts
-    /// only from its button.
     fn native_warning(
         &self,
         mods: &Result<Vec<native_mods::Bundle>, String>,
@@ -3327,8 +3257,6 @@ impl Launcher {
         )
     }
 
-    /// Settings' Proxy row: the HTTP proxy every download and sign-in goes through, kept in
-    /// `settings.json` and read back by `proxy.rs` on each request.
     fn proxy_row(&self, n: usize, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let focused = self.proxy_focused;
@@ -3352,7 +3280,6 @@ impl Launcher {
                     .text_color(t.muted)
                     .child("For example http://127.0.0.1:7890")
             } else {
-                // The end of a long line stays in view while typing.
                 let chars: Vec<char> = self.proxy_input.chars().collect();
                 let shown: String = chars[chars.len().saturating_sub(44)..].iter().collect();
                 div().text_color(t.ink).child(shown)
@@ -3371,7 +3298,6 @@ impl Launcher {
                     }
                     _ if paste => {
                         if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
-                            // A copied line, not a copied page: the field takes one address.
                             let line = text.lines().next().unwrap_or(&text);
                             this.proxy_input.push_str(line.trim());
                         }
@@ -3383,7 +3309,6 @@ impl Launcher {
                     }
                     _ => return,
                 }
-                // `truncate` counts bytes, and a cut inside a character panics: count characters.
                 if this.proxy_input.chars().count() > 256 {
                     this.proxy_input = this.proxy_input.chars().take(256).collect();
                 }
@@ -3391,7 +3316,6 @@ impl Launcher {
                 cx.stop_propagation();
                 cx.notify();
             }));
-        // A half-typed address is no reason to complain; one left behind is.
         let detail = match (focused, horizon_launcher::proxy::refuse(&self.proxy_input)) {
             (false, Some(why)) => div().text_color(t.danger).child(why).into_any_element(),
             _ => div()
@@ -3405,8 +3329,6 @@ impl Launcher {
         index_row(n, "Proxy", Some(detail), Some(field.into_any_element()), &t)
     }
 
-    /// Keeps the Proxy field in `settings.json`, and tells the parts that build their own agents
-    /// (`horizon-port-pack`) which proxy to use.
     fn save_proxy(&mut self) {
         let value = self.proxy_input.trim().to_owned();
         self.settings.proxy = (!value.is_empty()).then_some(value);
@@ -3414,8 +3336,6 @@ impl Launcher {
         horizon_launcher::proxy::announce(self.settings.proxy.clone());
     }
 
-    /// Settings' Microsoft accounts: who is signed in and plays, the sign-in with its code. The
-    /// rows are numbered from 01; returns them and how many there are.
     fn account_rows(&mut self, cx: &mut Context<Self>) -> (Div, usize) {
         let t = self.theme;
         let mut rows = div().flex().flex_col();
@@ -3507,7 +3427,7 @@ impl Launcher {
             Some(SignInState::Done(Ok(a))) => div().child(format!("Signed in as {}.", a.name)),
             Some(SignInState::Done(Err(e))) => div().text_color(t.danger).child(e.clone()),
             None if self.accounts.accounts.is_empty() => div().child(tr(
-                "Horizon needs a Microsoft account that owns Minecraft: Java Edition, like other launchers. It also plays online servers with your name and skin.",
+                "FXL needs a Microsoft account that owns Minecraft: Java Edition, like other launchers. It also plays online servers with your name and skin.",
             )),
             None => div().child(tr("Add another account.")),
         };
@@ -3584,8 +3504,6 @@ impl Launcher {
         (rows, n)
     }
 
-    /// Join a friend: a code field and Join, which starts the game straight
-    /// into the friend's world (errors show in the game).
     fn join_friend_row(&self, can_play: bool, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let focused = self.friend_focused;
@@ -3607,7 +3525,6 @@ impl Launcher {
             .child(if self.friend_code.is_empty() && !focused {
                 div().text_color(t.muted).child(tr("Paste an invite code"))
             } else {
-                // The end of a long code stays in view while typing.
                 let shown: String = {
                     let chars: Vec<char> = self.friend_code.chars().collect();
                     chars[chars.len().saturating_sub(30)..].iter().collect()
@@ -3674,8 +3591,6 @@ impl Launcher {
         )
     }
 
-    /// Plays the selected instance straight into a world (`--world`) or a server (`--server`):
-    /// flags every Horizon release takes.
     pub(crate) fn quick_play(&mut self, flag: &'static str, value: String) {
         self.quick_play = Some((flag, value));
         self.play();
@@ -3702,7 +3617,6 @@ impl Launcher {
             "Builds from GitHub. Each one installs into its own folder.",
             &t,
         );
-        // Measured again when the installed versions change.
         if self.disk_for != self.installed {
             self.disk_for = self.installed.clone();
             let (tags, tx) = (self.installed.clone(), self.tx.clone());
@@ -3747,7 +3661,6 @@ impl Launcher {
             Load::Ready(r) if r.is_empty() => return page.child(centered("No releases yet.", &t)),
             Load::Ready(r) => r,
         };
-        // A hundred releases: only the rows near the screen are drawn.
         let keep = |i: usize| {
             let tag = &releases[i].tag;
             self.installing.as_ref().is_some_and(|(t, _)| t == tag)
@@ -3959,7 +3872,7 @@ impl Launcher {
                                 .child("Support the work below"),
                         )
                         .child(text(theme::UI).text_color(t.muted).child(
-                            "Horizon is built in the open. Sponsors fund the next release.",
+                            "FXL is built in the open. Sponsors fund the next release.",
                         )),
                 )
                 .child(
@@ -4057,8 +3970,6 @@ impl Launcher {
     }
 }
 
-/// A thin bar. A known fraction eases from its previous value; an unknown one shuttles slowly.
-/// Progress: a sunk track filling with the accent; work of unknown length shuttles a block.
 fn progress_bar(fraction: Option<(f32, f32)>, t: &Theme) -> Div {
     let bar = div()
         .absolute()
@@ -4097,7 +4008,7 @@ fn progress_bar(fraction: Option<(f32, f32)>, t: &Theme) -> Div {
 }
 
 impl Render for Launcher {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
         self.scale = window.scale_factor();
         self.perf.frame();
@@ -4120,11 +4031,9 @@ impl Render for Launcher {
             Page::Settings => self.settings_page(cx),
         };
         self.art.free_replaced(window);
-        // The new page fades in and rises a few pixels.
         let content = div()
             .relative()
             .w_full()
-            // Let the page shrink inside the padded flex row so long notices can wrap.
             .min_w_0()
             .child(content)
             .with_animation(
@@ -4236,8 +4145,6 @@ impl Render for Launcher {
             root = root.child(self.owner_screen(cx));
         }
         if let Some(opening) = &self.opening {
-            // The wordmark arrives letter by letter, then gives way to the launcher; a click or
-            // a key skips ahead.
             let gone = 1. - ease_out_cubic(reveal / 0.6);
             let word = div()
                 .flex()
@@ -4246,7 +4153,7 @@ impl Render for Launcher {
                 .line_height(px(theme::WORDMARK.px * 0.5))
                 .font_weight(FontWeight::BOLD)
                 .text_color(t.ink)
-                .children("HORIZON".chars().enumerate().map(|(i, c)| {
+                .children("FXL".chars().enumerate().map(|(i, c)| {
                     let at = held - i as f32 * theme::STAGGER.as_secs_f32() * 1.5;
                     let p = ease_out_cubic(at / theme::ENTER.as_secs_f32());
                     div()
@@ -4301,9 +4208,7 @@ impl Render for Launcher {
 }
 
 impl Launcher {
-    /// Where the opening is: the reveal's progress (1 when there is no opening) and how long
-    /// the wordmark has been showing, in seconds.
-    fn opening_phase(&mut self, window: &mut Window) -> (f32, f32) {
+    fn opening_phase(&mut self, window: &Window) -> (f32, f32) {
         let loaded = !matches!(self.releases, Load::Loading);
         let Some(opening) = &mut self.opening else {
             return (1., 10.);
@@ -4323,9 +4228,7 @@ impl Launcher {
         (reveal, held.as_secs_f32())
     }
 
-    /// `horizon-launcher benchmark`: scroll the page a little on every frame, back to the top at
-    /// the bottom, so the frame times measure scrolling.
-    fn bench_scroll(&mut self, window: &mut Window) {
+    fn bench_scroll(&mut self, window: &Window) {
         let handle = &self.content_scroll.handle;
         let mut offset = handle.offset();
         offset.y -= px(24.);
@@ -4345,15 +4248,12 @@ impl Launcher {
 
 actions!(horizon_launcher, [Quit, CloseWindow]);
 
-/// What closing the last window does: stop the servers this launcher started, send the telemetry,
-/// exit. A game that is running keeps running. Cmd+Q goes through here too.
 fn shut_down(cx: &mut App) {
     servers_page::stop_on_quit();
     telemetry::send_before_exit();
     cx.quit()
 }
 
-/// The macOS shortcuts: Cmd+Q quits, Cmd+W closes the window.
 #[cfg(target_os = "macos")]
 fn key_bindings() -> Vec<KeyBinding> {
     vec![
@@ -4367,12 +4267,11 @@ fn key_bindings() -> Vec<KeyBinding> {
     Vec::new()
 }
 
-/// The menu bar on macOS, where "Quit" belongs to the app menu.
 fn menus() -> Vec<Menu> {
     vec![
         Menu {
-            name: "Horizon Launcher".into(),
-            items: vec![MenuItem::action("Quit Horizon Launcher", Quit)],
+            name: "FXL Launcher".into(),
+            items: vec![MenuItem::action("Quit FXL Launcher", Quit)],
         },
         Menu {
             name: "Window".into(),
@@ -4388,8 +4287,6 @@ fn main() {
     }
     perf::process_started();
     backend::exe_path();
-    // What the launcher downloads goes through the player's proxy, if they set one: the parts
-    // that build their own agents (`horizon-port-pack`) are told before anything starts.
     horizon_launcher::proxy::announce(horizon_launcher::backend::Settings::load().proxy);
     if let Some(code) = cli::run() {
         std::process::exit(code);
@@ -4410,8 +4307,6 @@ fn main() {
                 .expect("bundled fonts");
             cx.bind_keys(key_bindings());
             cx.on_action(|_: &Quit, cx| shut_down(cx));
-            // The key press is being handled inside the window, so the window can only be
-            // removed once that update has finished.
             cx.on_action(|_: &CloseWindow, cx| {
                 cx.defer(|cx| {
                     for window in cx.windows() {
@@ -4428,7 +4323,7 @@ fn main() {
                     titlebar: Some(titlebar::options()),
                     #[cfg(target_os = "linux")]
                     window_decorations: Some(gpui::WindowDecorations::Client),
-                    app_id: Some("horizon-launcher".into()),
+                    app_id: Some("fxl-launcher".into()),
                     ..Default::default()
                 },
                 |window, cx| cx.new(|cx| Launcher::new(window, cx)),
@@ -4468,9 +4363,6 @@ mod tests {
         );
     }
 
-    /// An owner's Play works on a version not prepared yet: it prepares it (downloading
-    /// Minecraft from Mojang when this computer has no install), then plays. Without an owner
-    /// it stays off: signing in comes first.
     #[test]
     fn play_prepares_first_for_an_owner() {
         use super::{play_press, PlayPress};
@@ -4486,8 +4378,6 @@ mod tests {
         assert_eq!(play_press(true, Some(true), true), PlayPress::Nothing);
     }
 
-    /// A server's Join (and every other shortcut) waits like Play: not while the version's
-    /// first download and preparation run (#horizon-bugs, 0.2.23: a white window opened).
     #[test]
     fn shortcuts_start_only_when_play_would() {
         use super::starts_now;
@@ -4504,10 +4394,10 @@ mod tests {
     #[test]
     fn the_app_menu_has_quit() {
         let menus = super::menus();
-        assert_eq!(menus[0].name, "Horizon Launcher");
+        assert_eq!(menus[0].name, "FXL Launcher");
         assert!(matches!(
             &menus[0].items[0],
-            gpui::MenuItem::Action { name, .. } if name == "Quit Horizon Launcher"
+            gpui::MenuItem::Action { name, .. } if name == "Quit FXL Launcher"
         ));
     }
 
