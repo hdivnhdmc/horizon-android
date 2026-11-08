@@ -26,17 +26,17 @@
         android:isGame="true"
         android:allowBackup="false"
         android:enableOnBackInvokedCallback="true"
-        android:theme="@style/Horizon">
+        android:theme="@style/Fxl">
 
         <activity
-            android:name=".HorizonActivity"
+            android:name=".FxlActivity"
             android:exported="true"
             android:launchMode="singleTask"
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density|fontScale|layoutDirection|locale"
             android:resizeableActivity="true"
             android:windowSoftInputMode="adjustNothing|stateHidden">
-            <meta-data android:name="android.app.lib_name" android:value="horizon" />
+            <meta-data android:name="android.app.lib_name" android:value="fxl" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -45,7 +45,7 @@
 
         <provider
             android:name=".ApkProvider"
-            android:authorities="com.lukagejak.horizon.update"
+            android:authorities="com.lukagejak.fxl.update"
             android:exported="false"
             android:grantUriPermissions="true" />
     </application>
