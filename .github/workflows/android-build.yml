@@ -41,7 +41,7 @@ jobs:
       - name: Build Android App
         run: |
           cd launcher
-          cargo build --target aarch64-linux-android --release
+          cargo build --target aarch64-linux-android --release --no-default-features
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
