@@ -7,15 +7,15 @@ plugins {
 def staged = rootProject.file('build/stage')
 
 android {
-    namespace 'com.lukagejak.horizon'
+    namespace 'com.lukagejak.fxl'
     compileSdk 37
 
     defaultConfig {
-        applicationId 'com.lukagejak.horizon'
+        applicationId 'com.lukagejak.fxl'
         minSdk 29
         targetSdk 37
-        versionCode Integer.parseInt(project.findProperty('horizonVersionCode') ?: '1')
-        versionName project.findProperty('horizonVersionName') ?: '0.1.0'
+        versionCode Integer.parseInt(project.findProperty('fxlVersionCode') ?: '1')
+        versionName project.findProperty('fxlVersionName') ?: '0.1.0'
         ndk {
             abiFilters 'arm64-v8a'
         }
@@ -30,12 +30,12 @@ android {
 
     signingConfigs {
         release {
-            def keystore = System.getenv('HORIZON_ANDROID_KEYSTORE')
+            def keystore = System.getenv('FXL_ANDROID_KEYSTORE') ?: System.getenv('HORIZON_ANDROID_KEYSTORE')
             if (keystore) {
                 storeFile file(keystore)
-                storePassword System.getenv('HORIZON_ANDROID_KEYSTORE_PASSWORD')
-                keyAlias System.getenv('HORIZON_ANDROID_KEY_ALIAS') ?: 'horizon'
-                keyPassword System.getenv('HORIZON_ANDROID_KEYSTORE_PASSWORD')
+                storePassword System.getenv('FXL_ANDROID_KEYSTORE_PASSWORD') ?: System.getenv('HORIZON_ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('FXL_ANDROID_KEY_ALIAS') ?: System.getenv('HORIZON_ANDROID_KEY_ALIAS') ?: 'fxl'
+                keyPassword System.getenv('FXL_ANDROID_KEYSTORE_PASSWORD') ?: System.getenv('HORIZON_ANDROID_KEYSTORE_PASSWORD')
             }
         }
     }
@@ -44,7 +44,7 @@ android {
         release {
             minifyEnabled false
             shrinkResources false
-            signingConfig System.getenv('HORIZON_ANDROID_KEYSTORE') ? signingConfigs.release : signingConfigs.debug
+            signingConfig (System.getenv('FXL_ANDROID_KEYSTORE') ?: System.getenv('HORIZON_ANDROID_KEYSTORE')) ? signingConfigs.release : signingConfigs.debug
         }
     }
 
