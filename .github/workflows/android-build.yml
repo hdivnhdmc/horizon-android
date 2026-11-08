@@ -18,20 +18,33 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Set up Android SDK & NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager "ndk;26.1.10909129"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909129" >> $GITHUB_ENV
+          echo "$ANDROID_HOME/ndk/26.1.10909129/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
 
+      - name: Configure Cargo Linker
+        run: |
+          mkdir -p ~/.cargo
+          echo '[target.aarch64-linux-android]' >> ~/.cargo/config.toml
+          echo 'linker = "aarch64-linux-android24-clang"' >> ~/.cargo/config.toml
+
       - name: Build Android APK
         run: |
           cd launcher
           cargo build --target aarch64-linux-android --release
-          cd ../android
-          ./gradlew assembleRelease
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: fxl-launcher-release
-          path: android/app/build/outputs/apk/release/*.apk
+          path: launcher/target/aarch64-linux-android/release/*.a
