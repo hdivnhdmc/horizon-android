@@ -18,13 +18,25 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install Android NDK Manually
+        run: |
+          echo "Downloading Android NDK..."
+          wget -q https://dl.google.com/android/repository/android-ndk-r26b-linux.zip
+          unzip -q android-ndk-r26b-linux.zip
+          mv android-ndk-r26b $HOME/ndk
+          echo "ANDROID_NDK_HOME=$HOME/ndk" >> $GITHUB_ENV
+          echo "$HOME/ndk/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
+
+      - name: Configure Cargo Linker
+        run: |
+          mkdir -p ~/.cargo
+          echo '[target.aarch64-linux-android]' >> ~/.cargo/config.toml
+          echo 'linker = "aarch64-linux-android24-clang"' >> ~/.cargo/config.toml
 
       - name: Build Android App
         run: |
