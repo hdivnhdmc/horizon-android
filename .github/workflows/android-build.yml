@@ -38,10 +38,16 @@ jobs:
           echo '[target.aarch64-linux-android]' >> ~/.cargo/config.toml
           echo 'linker = "aarch64-linux-android24-clang"' >> ~/.cargo/config.toml
 
+      - name: Patch Cargo for Android
+        run: |
+          # إزالة اعتمادات سطح المكتب الزائدة من ملفات الـ Cargo لضمان توافق الأندرويد
+          find . -name "Cargo.toml" -exec sed -i '/windows/d' {} +
+          find . -name "Cargo.toml" -exec sed -i '/macos/d' {} +
+
       - name: Build Android App
         run: |
           cd launcher
-          cargo build --target aarch64-linux-android --release --no-default-features
+          cargo build --target aarch64-linux-android --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
