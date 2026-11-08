@@ -1,4 +1,4 @@
-package com.lukagejak.horizon;
+package com.lukagejak.fxl;
 
 import android.app.ActivityManager;
 import android.app.NativeActivity;
@@ -31,15 +31,15 @@ import android.widget.Toast;
 import android.window.OnBackInvokedDispatcher;
 
 /**
- * The game's window. Everything runs in libhorizon.so (android_main); this
+ * The game's window. Everything runs in libfxl.so (android_main); this
  * class only reaches what has no native API: the clipboard, links, the soft
  * keyboard and a few facts about the device. The native side calls
  * {@link #platform} and receives typed text through the native methods.
  */
-public class HorizonActivity extends NativeActivity {
+public class FxlActivity extends NativeActivity {
     static {
         // Loaded here as well as by NativeActivity, so the native methods below resolve.
-        System.loadLibrary("horizon");
+        System.loadLibrary("fxl");
     }
 
     /** Text the soft keyboard committed. */
@@ -138,7 +138,7 @@ public class HorizonActivity extends NativeActivity {
                 runOnUiThread(() -> {
                     ClipboardManager manager = getSystemService(ClipboardManager.class);
                     if (manager != null) {
-                        manager.setPrimaryClip(ClipData.newPlainText("Horizon", arg));
+                        manager.setPrimaryClip(ClipData.newPlainText("FXL", arg));
                     }
                 });
                 return null;
@@ -359,7 +359,7 @@ public class HorizonActivity extends NativeActivity {
     /** Opens Android's installer on the downloaded update, or its setting to allow it first. */
     private void installUpdate() {
         if (!getPackageManager().canRequestPackageInstalls()) {
-            Toast.makeText(this, "Allow Horizon to install apps, then press Update again",
+            Toast.makeText(this, "Allow FXL Launcher to install apps, then press Update again",
                     Toast.LENGTH_LONG).show();
             startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                     Uri.parse("package:" + getPackageName())));
